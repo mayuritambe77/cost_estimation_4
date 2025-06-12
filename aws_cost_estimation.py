@@ -2,20 +2,17 @@ import boto3
 import json
 import os
 from dotenv import load_dotenv
-from logger import setup_logger # Import the custom logger
 
 # Initialize logger for this module
-logger = setup_logger(name="CostEstimator")
 
 # Load credentials from .env
 load_dotenv()
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-logger.info(f"AWS_ACCESS_KEY Loaded: {'Yes' if AWS_ACCESS_KEY else 'No'}")
-logger.info(f"AWS_SECRET_KEY Loaded: {'Yes' if AWS_SECRET_KEY else 'No'}")
 
 REGION_CODE_MAP = {
                   "US East (N. Virginia)": "us-east-1",
+                  
                   "US East (Ohio)": "us-east-2",
                   "US West (N. California)": "us-west-1",
                   "US West (Oregon)": "us-west-2",
@@ -106,7 +103,6 @@ def get_rds_cost_estimate(pricing_client,architecture_json):
     term_type_key = list(price_item["terms"].keys())[0]  # usually 'OnDemand'
     term_data_map = price_item["terms"][term_type_key]
     first_term_id = next(iter(term_data_map))  # grab the first SKU id under OnDemand
-    logger.debug(f"First SKU code for RDS instance: {first_term_id}")
     term_data = term_data_map[first_term_id]
 
     # Now get the price
@@ -148,10 +144,6 @@ def get_rds_cost_estimate(pricing_client,architecture_json):
     # --- 3. Total Cost ---
     total_rds_monthly_cost = round(monthly_instance_cost + monthly_storage_cost, 4)
 
-    logger.info(f"RDS_Monthly_Instance_cost= {monthly_instance_cost}")
-    logger.info(f"RDS_Monthly_Storage_cost= {monthly_storage_cost}")
-    logger.info(f"Total_RDS_Monthly_cost= {total_rds_monthly_cost}")
-    logger.info("--------------------------------------------------------------------")
     return {
         "rds_instance_monthly_usd": monthly_instance_cost,
         "rds_storage_monthly_usd": monthly_storage_cost,
@@ -250,10 +242,6 @@ def get_ec2_cost_estimate(pricing_client, architecture_json):
         monthly_storage_cost = round(storage_price_per_gb * storage_gb, 4)
         total_ec2_monthly_cost = round(monthly_instance_cost + monthly_storage_cost, 3)
 
-        logger.info(f"monthly EC2 instance cost = {monthly_instance_cost}")
-        logger.info(f"monthly EC2 EBS Storage cost = {monthly_storage_cost}")
-        logger.info(f"Total Monthly EC2 Cost =  {total_ec2_monthly_cost}")
-        logger.info("--------------------------------------------------------------------")
         return {
             "ec2_instance_monthly_usd": monthly_instance_cost,
             "ec2_storage_monthly_usd": monthly_storage_cost,
@@ -355,11 +343,6 @@ def get_lambda_cost_estimate(pricing_client, architecture_json):
     billable_requests = max(0, requests_per_month - 1000000)
     total_request_cost = round(price_per_request * billable_requests, 4)
     total_lambda_cost = round(total_compute_cost + total_request_cost, 4)
-    logger.info(f"monthly Lambda compute cost = {total_compute_cost}")
-    logger.info(f"monthly Lambda request cost = {total_request_cost}")
-    logger.info(f"lambda_monthly_total_usd: {total_lambda_cost}")
-    logger.info("--------------------------------------------------------------------")
-
     return {
         "lambda_compute_monthly_usd": total_compute_cost,
         "lambda_request_monthly_usd": total_request_cost
@@ -428,7 +411,6 @@ def get_s3_cost_estimate(pricing_client, architecture_json):
         Filters=storage_filters,
         MaxResults=1
     )
-    logger.debug(json.dumps(storage_price_response))
     if not storage_price_response['PriceList']:
         raise ValueError("Could not fetch S3 storage pricing info.")
 
@@ -489,12 +471,6 @@ def get_s3_cost_estimate(pricing_client, architecture_json):
 
     #  Total S3 Cost 
     total_s3_cost = round(monthly_storage_cost + monthly_put_cost + monthly_get_cost, 4)
-
-    logger.info(f"S3_Monthly_Storage_cost = {monthly_storage_cost}")
-    logger.info(f"S3_Monthly_PUT_cost = {monthly_put_cost}")
-    logger.info(f"S3_Monthly_GET_cost = {monthly_get_cost}")
-    logger.info(f"Total_S3_Monthly_cost = {total_s3_cost}")
-    logger.info("--------------------------------------------------------------------")
 
     return {
         "s3_storage_monthly_usd": monthly_storage_cost,
@@ -593,7 +569,10 @@ if  __name__ == "__main__":
             }
 
     pricing_client = create_pricing_client()
-    get_rds_cost_estimate(pricing_client,architecture_json)
-    get_ec2_cost_estimate(pricing_client,architecture_json)
-    get_lambda_cost_estimate(pricing_client,architecture_json)
-#   get_s3_cost_estimate(pricing_client,architecture_json)
+    try:
+        print(get_rds_cost_estimate(pricing_client, architecture_json))
+        print(get_ec2_cost_estimate(pricing_client, architecture_json))
+        print(get_lambda_cost_estimate(pricing_client, architecture_json))
+        # print(get_s3_cost_estimate(pricing_client, architecture_json))
+    except Exception as e:
+        print("Error:", e)
