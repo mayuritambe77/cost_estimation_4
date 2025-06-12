@@ -1,0 +1,85 @@
+{
+    "title": "Cost_Estimation_Ready_Architecture",
+    "nodes": [
+      {
+        "id": "webAppServer",
+        "type": "AmazonEC2",
+        "label": "Web Server",
+        "region": "Asia Pacific (Mumbai)",
+        "attributes": {
+          "instanceType": "t3.micro",
+          "operatingSystem": "Linux",
+          "tenancy": "Shared",
+          "capacitystatus": "Used",
+          "preInstalledSw": "NA",
+          "termType": "OnDemand",
+          "storageGB": 15,
+          "volumeType": "gp3"
+
+        }
+      },
+      {
+        "id": "database",
+        "type": "AmazonRDS",
+        "label": "RDS Database",
+        "region": "Asia Pacific (Mumbai)",
+        "attributes": {
+          "instanceType": "db.t3.micro",
+          "databaseEngine": "PostgreSQL",
+          "termType": "OnDemand",
+          "storageGB": 100,
+          "storageType": "gp3"
+        }
+      },
+      {
+        "id": "storageBucket",
+        "type": "AmazonS3",
+        "label": "S3 Bucket",
+        "region": "Asia Pacific (Mumbai)",
+        "attributes": {
+          "storageGB": 100,
+          "storageClass": "Standard",
+          "numPUTRequests": 10000,
+          "numGETRequests": 50000
+        }
+      },
+      {
+        "id": "cloudfrontCDN",
+        "type": "AmazonCloudFront",
+        "label": "CloudFront CDN",
+        "region": "Global",
+        "attributes": {
+          "dataOutGB": 100
+        }
+      },
+    {
+        "id": "lambdaFunction",
+        "type": "AWSLambda",
+        "label": "Lambda Function",
+        "region": "Asia Pacific (Mumbai)",
+        "attributes": {
+          "requestsPerMonth": 10000000,
+          "durationMs": 100,
+          "memorySizeMB": 128
+        }
+      },
+      {
+        "id": "iamRole",
+        "type": "AWSIAM",
+        "label": "IAM Role",
+        "region": "Global",
+        "attributes": {
+          "userCount": 5,
+          "policyType": "Managed"
+        }
+      }
+    ],
+    "edges": [
+      { "from": "cloudfrontCDN", "to": "storageBucket" },
+      { "from": "webAppServer", "to": "database" },
+      { "from": "webAppServer", "to": "lambdaFunction" },
+      { "from": "lambdaFunction", "to": "database" },
+      { "from": "iamRole", "to": "webAppServer" },
+      { "from": "iamRole", "to": "lambdaFunction" }
+    ]
+}
